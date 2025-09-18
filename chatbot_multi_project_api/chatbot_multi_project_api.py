@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
-
+from fastapi.middleware.cors import CORSMiddleware
 from chatbot_multi_project_api.utils import parse_messages, format_messages
 
 # Load environment
@@ -34,6 +34,15 @@ print(f"Loaded graphs: {list(graphs.keys())}")
 
 # --- FastAPI App ---
 app = FastAPI()
+
+# Allow CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or specify ["http://127.0.0.1:5500"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_graph_or_404(name: str):
     if name not in graphs:

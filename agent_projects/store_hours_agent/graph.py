@@ -15,7 +15,7 @@ from langchain_core.utils.function_calling import format_tool_to_openai_tool
 load_dotenv()
 
 # 2. Set up the LLM with tool-calling capabilities
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 # 3. Define the State
 class AgentState(TypedDict):

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>LangGraph Multi-Agent Chat</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 20px auto; }
+    .chat { border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: auto; }
+    .message { margin: 5px 0; }
+    .human { font-weight: bold; color: #2c3e50; }
+    .ai { color: #16a085; }
+    .input-box { margin-top: 10px; display: flex; }
+    input, select { padding: 8px; }
+    button { padding: 8px; margin-left: 5px; }
+  </style>
+</head>
+<body>
+  <h2>LangGraph Multi-Agent Chat</h2>
+  <label for="graphSelect">Choose agent/graph: </label>
+  <select id="graphSelect"></select>
+
+  <div id="chat" class="chat"></div>
+
+  <div class="input-box">
+    <input id="userInput" type="text" placeholder="Type your message..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    const chatDiv = document.getElementById("chat");
+    const inputBox = document.getElementById("userInput");
+    const graphSelect = document.getElementById("graphSelect");
+
+    let messages = [];
+
+    function renderMessage(role, content) {
+      const div = document.createElement("div");
+      div.classList.add("message", role);
+      div.textContent = role.toUpperCase() + ": " + content;
+      chatDiv.appendChild(div);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    async function loadGraphs() {
+      const res = await fetch("http://localhost:8000/graphs");
+      const data = await res.json();
+      data.available_graphs.forEach(g => {
+        const opt = document.createElement("option");
+        opt.value = g;
+        opt.textContent = g;
+        graphSelect.appendChild(opt);
+      });
+    }
+
+    async function sendMessage() {
+      const text = inputBox.value.trim();
+      if (!text) return;
+      inputBox.value = "";
+
+      messages.push({ role: "human", content: text });
+      renderMessage("human", text);
+
+      const response = await fetch("http://localhost:8000/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ graph: graphSelect.value, messages })
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      let partial = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        partial += decoder.decode(value, { stream: true });
+
+        const events = partial.split("\n\n");
+        partial = events.pop();
+
+        for (const ev of events) {
+          if (ev.startsWith("data:")) {
+            const data = ev.replace("data:", "").trim();
+            if (data.startsWith("[final]")) {
+              // done
+            } else {
+              const match = data.match(/^\[.+?\]\s+(\w+):\s+(.+)$/);
+              if (match) {
+                const role = match[1].toLowerCase();
+                const content = match[2];
+                renderMessage(role, content);
+                if (role === "ai") {
+                  messages.push({ role, content });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    loadGraphs();
+  </script>
+</body>
+</html>
