@@ -15,10 +15,10 @@ load_dotenv()
 agents = {}
 
 cwd = Path.cwd()
-AGENTS_DIR = os.path.join(cwd, "agents") # A new, more logical directory name
+AGENTS_DIR = os.path.join(cwd, "agent_projects") # A new, more logical directory name
 
 # Cross-platform glob pattern to find all agent files
-pattern = os.path.join(AGENTS_DIR, "*_agent.py")
+pattern = os.path.join(AGENTS_DIR, "*_agent\*_agent.py")
 
 print(f"AGENTS_DIR: {AGENTS_DIR}")
 print(f"Agent loading pattern: {pattern}")

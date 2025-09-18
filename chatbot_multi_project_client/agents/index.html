@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>LangGraph Multi-Agent Chat</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 20px auto; }
+    .chat { border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: auto; }
+    .message { margin: 5px 0; }
+    .human { font-weight: bold; color: #2c3e50; }
+    .ai { color: #16a085; }
+    .input-box { margin-top: 10px; display: flex; }
+    input, select { padding: 8px; flex: 1; }
+    button { padding: 8px; margin-left: 5px; }
+  </style>
+</head>
+<body>
+  <h2>LangGraph Multi-Agent Chat</h2>
+  <label for="agentSelect">Choose agent: </label>
+  <select id="agentSelect"></select>
+
+  <div id="chat" class="chat"></div>
+
+  <div class="input-box">
+    <input id="userInput" type="text" placeholder="Type your message..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    const chatDiv = document.getElementById("chat");
+    const inputBox = document.getElementById("userInput");
+    const agentSelect = document.getElementById("agentSelect");
+
+    let messages = [];
+
+    function renderMessage(role, content) {
+      const div = document.createElement("div");
+      div.classList.add("message", role);
+      div.textContent = role.toUpperCase() + ": " + content;
+      chatDiv.appendChild(div);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    async function loadAgents() {
+      const res = await fetch("http://localhost:8000/agents");
+      const data = await res.json();
+      data.available_agents.forEach(a => {
+        const opt = document.createElement("option");
+        opt.value = a;
+        opt.textContent = a;
+        agentSelect.appendChild(opt);
+      });
+    }
+
+    async function sendMessage() {
+      const text = inputBox.value.trim();
+      if (!text) return;
+      inputBox.value = "";
+
+      // push and render human message
+      messages.push({ role: "human", content: text });
+      renderMessage("human", text);
+
+      // call REST API
+      const response = await fetch("http://localhost:8000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent: agentSelect.value, messages })
+      });
+
+      const data = await response.json();
+
+      // update conversation with AI response
+      const aiMessage = data.messages[data.messages.length - 1];
+      if (aiMessage && aiMessage.role === "ai") {
+        renderMessage("ai", aiMessage.content);
+        messages.push(aiMessage);
+      }
+    }
+
+    loadAgents();
+  </script>
+</body>
+</html>
